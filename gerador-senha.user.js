@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Gerador de Senha — Urgência e Emergência
 // @namespace    om30.guaruja.gerador
-// @version      1.1.0
+// @version      1.2.0
 // @description  Botão na tela de Atendimentos da Urgência/Emergência que gera uma senha (fila fixa configurada) e imprime o cupom na térmica, no mesmo modelo do totem.
 // @author       Otowm
 // @match        https://v3guaruja.saudesimples.net/*
@@ -48,6 +48,8 @@
     ['token', 'Token / ID do totem (o "totem.token"):', ''],
     ['botao', 'Texto do botão:', 'Gerar senha'],
     ['vias', 'Quantas vias imprimir (1 ou 2):', '1'],
+    ['tam_senha', 'Tamanho da fonte da senha em px (o totem usa 60):', '36'],
+    ['escala', 'Escala do cupom inteiro em % (100 = tamanho do totem; diminua se sair grande):', '100'],
   ];
   const PADRAO = Object.fromEntries(CAMPOS.map(([k, , p]) => [k, p]));
   const cfg = k => String(GM_getValue('gs_' + k, PADRAO[k]) ?? '');
@@ -74,6 +76,7 @@
   });
   GM_registerMenuCommand('Escolher fila da senha', () => abrirSeletor());
   GM_registerMenuCommand('Texto do botão / vias', () => { if (configurar(['botao', 'vias'])) location.reload(); });
+  GM_registerMenuCommand('Tamanho da senha / escala do cupom', () => { configurar(['tam_senha', 'escala']); });
   GM_registerMenuCommand('Imprimir cupom de teste', async () => {
     try {
       const f = await filaAtual();
@@ -226,11 +229,12 @@
       html, body { margin: 0; padding: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
         font-weight: 500; font-size: 7px; background: white; -webkit-print-color-adjust: exact;
         print-color-adjust: exact; box-sizing: border-box; }
+      body { zoom: ${escala()}; }
       .page { position: relative; height: 100mm; width: 73mm; display: block; background: white; overflow: hidden; }
       .container { border: 2px solid; min-height: 78%; }
       .health-unit { width: 100%; white-space: nowrap; font-size: 20px; font-weight: bold; text-align: center; }
       .health-unit-subtitle { width: 100%; text-align: center; font-size: 10px; margin-top: -4px; word-wrap: break-word; }
-      .number { font-size: 60px; text-align: center; color: white; background-color: black; margin: 5px 10px; white-space: nowrap; }
+      .number { font-size: ${tamSenha()}px; text-align: center; color: white; background-color: black; margin: 5px 10px; white-space: nowrap; }
       .queue { text-align: center; font-size: 15px; }
       .instructions { text-align: center; font-size: 11px; font-style: italic; margin: 5px 20px; }
       .instructions-footer { font-size: 12px; text-align: center; margin: 50px 15px 0 15px; word-wrap: break-word; }
@@ -254,13 +258,16 @@
     </body></html>`;
   }
 
+  const tamSenha = () => Math.max(12, Math.min(80, Number(cfg('tam_senha')) || 36));
+  const escala = () => Math.max(30, Math.min(150, Number(cfg('escala')) || 100)) / 100;
+
   // Senha sempre numa linha: reduz a fonte até caber (como o totem).
   function ajustarSenha(doc) {
     doc.querySelectorAll('.number').forEach(el => {
       const r = doc.createRange();
       r.selectNodeContents(el);
-      let t = 60;
-      while (r.getBoundingClientRect().width > el.clientWidth && t > 24) {
+      let t = tamSenha();
+      while (r.getBoundingClientRect().width > el.clientWidth && t > 12) {
         t -= 2;
         el.style.fontSize = `${t}px`;
       }
