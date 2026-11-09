@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Gerador de Senha — Urgência e Emergência
 // @namespace    om30.guaruja.gerador
-// @version      1.5.0
+// @version      1.5.1
 // @description  Botão na tela de Atendimentos da Urgência/Emergência que gera uma senha (fila fixa configurada) e imprime o cupom na térmica, no mesmo modelo do totem.
 // @author       Otowm
 // @match        https://v3guaruja.saudesimples.net/*
@@ -10,6 +10,8 @@
 // @grant        GM_getValue
 // @grant        GM_addStyle
 // @grant        GM_registerMenuCommand
+// @updateURL    https://raw.githubusercontent.com/otowm/gerador-senha/main/gerador-senha.user.js
+// @downloadURL  https://raw.githubusercontent.com/otowm/gerador-senha/main/gerador-senha.user.js
 // @connect      senhaguaruja.saudesimples.net
 // @connect      localhost
 // @connect      *
