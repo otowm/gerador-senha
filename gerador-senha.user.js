@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Gerador de Senha — Urgência e Emergência
 // @namespace    om30.guaruja.gerador
-// @version      1.3.1
+// @version      1.3.2
 // @description  Botão na tela de Atendimentos da Urgência/Emergência que gera uma senha (fila fixa configurada) e imprime o cupom na térmica, no mesmo modelo do totem.
 // @author       Otowm
 // @match        https://v3guaruja.saudesimples.net/*
@@ -222,12 +222,12 @@
     const { senha } = d;
     const imagem = String(d.imagem || '').trim();
     return `<!doctype html><html><head><meta charset="utf-8"><title>SENHA</title><style>
-      @page { size: 73mm 100mm; margin: 0; }
+      @page { margin: 0; }
       html, body { margin: 0; padding: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
         font-weight: 500; font-size: 7px; background: white; -webkit-print-color-adjust: exact;
         print-color-adjust: exact; box-sizing: border-box; }
-      .page { position: relative; height: 100mm; width: 73mm; display: block; background: white; overflow: hidden; }
-      .container { border: 2px solid; min-height: 78%; }
+      .page { position: relative; width: 73mm; height: 100mm; display: block; background: white; overflow: hidden; }
+      .container { border: 2px solid; min-height: 78mm; box-sizing: border-box; }
       .health-unit { width: 100%; white-space: nowrap; font-size: 20px; font-weight: bold; text-align: center; }
       .health-unit-subtitle { width: 100%; text-align: center; font-size: 10px; margin-top: -4px; word-wrap: break-word; }
       .number { font-size: 60px; text-align: center; color: white; background-color: black; margin: 5px 10px; white-space: nowrap; }
