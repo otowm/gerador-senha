@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Gerador de Senha — Urgência e Emergência
 // @namespace    om30.guaruja.gerador
-// @version      1.3.2
+// @version      1.4.0
 // @description  Botão na tela de Atendimentos da Urgência/Emergência que gera uma senha (fila fixa configurada) e imprime o cupom na térmica, no mesmo modelo do totem.
 // @author       Otowm
 // @match        https://v3guaruja.saudesimples.net/*
@@ -11,6 +11,7 @@
 // @grant        GM_addStyle
 // @grant        GM_registerMenuCommand
 // @connect      senhaguaruja.saudesimples.net
+// @connect      localhost
 // @connect      *
 // @run-at       document-idle
 // ==/UserScript==
@@ -48,6 +49,7 @@
     ['token', 'Token / ID do totem (o "totem.token"):', ''],
     ['botao', 'Texto do botão:', 'Gerar senha'],
     ['vias', 'Quantas vias imprimir (1 ou 2):', '1'],
+    ['servico', 'Endereço do serviço de impressão direta (vazio = usar a janela de impressão do Chrome):', 'http://localhost:9110'],
   ];
   const PADRAO = Object.fromEntries(CAMPOS.map(([k, , p]) => [k, p]));
   const cfg = k => String(GM_getValue('gs_' + k, PADRAO[k]) ?? '');
@@ -74,10 +76,11 @@
   });
   GM_registerMenuCommand('Escolher fila da senha', () => abrirSeletor());
   GM_registerMenuCommand('Texto do botão / vias', () => { if (configurar(['botao', 'vias'])) location.reload(); });
+  GM_registerMenuCommand('Serviço de impressão direta (SumatraPDF)', () => { configurar(['servico']); });
   GM_registerMenuCommand('Imprimir cupom de teste', async () => {
     try {
       const f = await filaAtual();
-      imprimirCupom({ senha: 'TESTE01', ...f });
+      await imprimirCupom({ senha: 'TESTE01', ...f });
     } catch (e) { alert('Gerador de senha: ' + e.message); }
   });
 
@@ -267,7 +270,7 @@
     });
   }
 
-  function imprimirCupom(dados) {
+  function imprimirNavegador(dados) {
     return new Promise(resolve => {
       const vias = Math.max(1, Math.min(2, Number(cfg('vias')) || 1));
       const iframe = document.createElement('iframe');
@@ -300,6 +303,52 @@
         setTimeout(imprimir, 50);
       }
     });
+  }
+
+  // Impressão direta (sem janela): manda o cupom ao serviço local
+  // impressao-senha.ps1, que gera o PDF 73x100 mm e imprime com
+  // SumatraPDF -print-to-default -print-settings "noscale", como o totem.
+  function htmlParaServico(dados) {
+    const vias = Math.max(1, Math.min(2, Number(cfg('vias')) || 1));
+    const ajuste = `<script>(function(){
+      var pg=document.querySelector('.page');
+      if(${vias}===2){pg.style.pageBreakAfter='always';document.body.appendChild(pg.cloneNode(true)).style.pageBreakAfter='auto';}
+      document.querySelectorAll('.number').forEach(function(el){var r=document.createRange();r.selectNodeContents(el);var t=60;
+        while(r.getBoundingClientRect().width>el.clientWidth&&t>24){t-=2;el.style.fontSize=t+'px';}});
+    })();<\/script>`;
+    return htmlCupom(dados)
+      .replace('@page { margin: 0; }', '@page { size: 73mm 100mm; margin: 0; }')
+      .replace('</body>', ajuste + '</body>');
+  }
+
+  function imprimirServico(dados) {
+    const url = cfg('servico').trim().replace(/\/+$/, '');
+    return new Promise((resolve, reject) => {
+      GM_xmlhttpRequest({
+        method: 'POST',
+        url: url + '/imprimir',
+        headers: { 'Content-Type': 'text/html; charset=utf-8', 'X-Gerador-Senha': '1' },
+        data: htmlParaServico(dados),
+        timeout: 30000,
+        anonymous: true,
+        onload: r => (r.status >= 200 && r.status < 300 ? resolve()
+          : reject(new Error(`serviço de impressão: ${(r.responseText || '').trim() || 'HTTP ' + r.status}`))),
+        onerror: () => reject(Object.assign(new Error('serviço de impressão não está rodando'), { offline: true })),
+        ontimeout: () => reject(new Error('serviço de impressão não respondeu')),
+      });
+    });
+  }
+
+  async function imprimirCupom(dados) {
+    if (!cfg('servico').trim()) return imprimirNavegador(dados);
+    try {
+      await imprimirServico(dados);
+    } catch (e) {
+      LOG(e.message);
+      if (!e.offline) throw e;
+      // Serviço fora do ar: cai para a janela de impressão do Chrome.
+      await imprimirNavegador(dados);
+    }
   }
 
   // ------------------------------------------------------------ BOTÃO
@@ -365,7 +414,7 @@
       }
     });
     box.querySelector('.gs-trocar').addEventListener('click', abrirSeletor);
-    reimp.addEventListener('click', () => { if (ultima) imprimirCupom(ultima); });
+    reimp.addEventListener('click', () => { if (ultima) imprimirCupom(ultima).catch(e => mostrar(`Erro: ${e.message}`, 'erro')); });
     setTimeout(atualizarRotulo);
     return box;
   }
