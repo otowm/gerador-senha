@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Gerador de Senha — Urgência e Emergência
 // @namespace    om30.guaruja.gerador
-// @version      1.4.0
+// @version      1.5.0
 // @description  Botão na tela de Atendimentos da Urgência/Emergência que gera uma senha (fila fixa configurada) e imprime o cupom na térmica, no mesmo modelo do totem.
 // @author       Otowm
 // @match        https://v3guaruja.saudesimples.net/*
@@ -76,7 +76,16 @@
   });
   GM_registerMenuCommand('Escolher fila da senha', () => abrirSeletor());
   GM_registerMenuCommand('Texto do botão / vias', () => { if (configurar(['botao', 'vias'])) location.reload(); });
-  GM_registerMenuCommand('Serviço de impressão direta (SumatraPDF)', () => { configurar(['servico']); });
+  const direto = () => GM_getValue('gs_direto', true) && !!cfg('servico').trim();
+  GM_registerMenuCommand(
+    direto() ? 'Impressão direta (SumatraPDF): LIGADA — clique para desligar'
+      : 'Impressão direta (SumatraPDF): DESLIGADA — clique para ligar',
+    () => {
+      if (!cfg('servico').trim()) salvar('servico', PADRAO.servico);
+      GM_setValue('gs_direto', !direto());
+      location.reload();
+    });
+  GM_registerMenuCommand('Endereço do serviço de impressão', () => { configurar(['servico']); });
   GM_registerMenuCommand('Imprimir cupom de teste', async () => {
     try {
       const f = await filaAtual();
@@ -340,7 +349,7 @@
   }
 
   async function imprimirCupom(dados) {
-    if (!cfg('servico').trim()) return imprimirNavegador(dados);
+    if (!direto()) return imprimirNavegador(dados);
     try {
       await imprimirServico(dados);
     } catch (e) {
