@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Gerador de Senha — Urgência e Emergência
 // @namespace    om30.guaruja.gerador
-// @version      1.5.1
+// @version      1.6.0
 // @description  Botão na tela de Atendimentos da Urgência/Emergência que gera uma senha (fila fixa configurada) e imprime o cupom na térmica, no mesmo modelo do totem.
 // @author       Otowm
 // @match        https://v3guaruja.saudesimples.net/*
@@ -78,6 +78,11 @@
   });
   GM_registerMenuCommand('Escolher fila da senha', () => abrirSeletor());
   GM_registerMenuCommand('Texto do botão / vias', () => { if (configurar(['botao', 'vias'])) location.reload(); });
+  const imprime = () => GM_getValue('gs_imprimir', true);
+  GM_registerMenuCommand(
+    imprime() ? 'Imprimir senha: SIM — clique para só gerar (sem imprimir)'
+      : 'Imprimir senha: NÃO (só gera) — clique para imprimir',
+    () => { GM_setValue('gs_imprimir', !imprime()); location.reload(); });
   const direto = () => GM_getValue('gs_direto', true) && !!cfg('servico').trim();
   GM_registerMenuCommand(
     direto() ? 'Impressão direta (SumatraPDF): LIGADA — clique para desligar'
@@ -393,7 +398,7 @@
       <button type="button" class="btn btn-primary gs-btn">
         <i class="icon zmdi zmdi-ticket-star" aria-hidden="true"></i> ${esc(cfg('botao') || 'Gerar senha')}
       </button>
-      <button type="button" class="btn btn-default btn-outline gs-reimp" hidden>Reimprimir</button>
+      <button type="button" class="btn btn-default btn-outline gs-reimp" hidden>Imprimir</button>
       <button type="button" class="btn btn-default btn-outline gs-trocar" title="Trocar fila"><span class="gs-fila"></span> ▾</button>
       <span class="gs-status" role="status" aria-live="polite"></span>`;
     const btn = box.querySelector('.gs-btn');
@@ -412,10 +417,20 @@
       try {
         ultima = await gerarSenha();
         const { senha } = ultima;
-        mostrar(`Senha ${senha} — imprimindo…`, 'ok');
-        await imprimirCupom(ultima);
-        mostrar(`Senha ${senha}`, 'ok');
         reimp.hidden = false;
+        if (!imprime()) {
+          mostrar(`Senha ${senha}`, 'ok');
+        } else {
+          mostrar(`Senha ${senha} — imprimindo…`, 'ok');
+          try {
+            await imprimirCupom(ultima);
+            mostrar(`Senha ${senha}`, 'ok');
+          } catch (e) {
+            // A senha já foi gerada: avisa só que a impressão falhou.
+            LOG('falha ao imprimir', e);
+            mostrar(`Senha ${senha} gerada, mas não imprimiu: ${e.message}`, 'erro');
+          }
+        }
       } catch (e) {
         LOG('falha', e);
         mostrar(`Erro: ${e.message}`, 'erro');
