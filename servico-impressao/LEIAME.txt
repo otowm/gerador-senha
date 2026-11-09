@@ -1,0 +1,25 @@
+IMPRESSAO DIRETA DO GERADOR DE SENHA (sem janela de impressao)
+==============================================================
+
+Faz igual ao totem: gera um PDF de 73 x 100 mm e imprime na impressora
+PADRAO do Windows com:  SumatraPDF -print-to-default -print-settings "noscale"
+So as senhas do botao "Gerar senha" saem direto. O resto do Chrome continua
+normal, com a janela de impressao de sempre.
+
+Requisitos: SumatraPDF instalado (C:\Program Files\SumatraPDF) e Edge ou Chrome.
+
+INSTALAR (uma vez em cada computador)
+  1. Copie esta pasta para o computador.
+  2. De dois cliques em instalar.bat.
+  3. Abra http://localhost:9110/status  -> deve aparecer "ok".
+  4. No Saude Simples, menu do Tampermonkey -> "Imprimir cupom de teste".
+O servico inicia sozinho junto com o Windows (pasta Inicializar).
+
+Se o servico nao estiver rodando, o botao usa a janela de impressao do Chrome.
+
+Impressora diferente da padrao: edite o atalho em
+  shell:startup -> "Gerador de Senha - Impressao"
+e acrescente no fim:  -Impressora "NOME DA IMPRESSORA"
+
+Log de erros: %TEMP%\gerador-senha\servico.log
+Remover: desinstalar.bat
